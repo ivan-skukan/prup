@@ -1,7 +1,4 @@
 import math
-import multiprocessing
-import threading
-import time
 
 class Vec3:
     def __init__(self, x, y, z):
@@ -245,10 +242,5 @@ def write_png(pixels, width, height, filename):
 
 if __name__ == "__main__":
     scene = create_scene_1()
-    start = time.time()
     pixels = render(scene=scene)
-    end = time.time()
-    print(f"Render time: {end-start}")
-    from datetime import datetime
-    curr_datetime = datetime.now().strftime() # yyyy-mm-dd-hh-mm-ss
-    write_png(pixels, scene.width, scene.height, f"test-{curr_datetime}.png")
+    write_png(pixels, scene.width, scene.height, "test.png")

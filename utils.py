@@ -1,6 +1,4 @@
 import math
-import multiprocessing
-import threading
 import time
 
 class Vec3:
@@ -163,48 +161,51 @@ def create_ray(scene, x, y, s, samples_per_pixels):
     screen_y = (float(y) + posy - float(scene.height) * 0.5)
     return scene.camera.create_ray(screen_x, screen_y)
 
+def load_scene(data): # json
+    positiondata = data['camera']['position']
+    position = Vec3(positiondata[0],positiondata[1],positiondata[2])
+    #print(position,position.x,position.y,position.z)
+    lookatdata = data['camera']['lookat']
+    lookat = Vec3(lookatdata[0],lookatdata[1],lookatdata[2])
+    #print(lookat,lookat.x,lookat.y,lookat,z)
+    distance = data['camera']['distance']
 
-def render(scene):
-    pixels = [Vec3(0.0, 0.0, 0.0)] * (scene.width * scene.height)
-    # main rendering loop, this should be paralelized
-    for y in range(scene.height):
-        for x in range(scene.width):
-            acum = Vec3(0.0, 0.0, 0.0)
-            for s in range(scene.samples_per_pixel):
-                ray = create_ray(scene, x, y, s, scene.samples_per_pixel)
-                isect = intersect_shapes(ray, scene.shapes)
-                if isect is not None:
-                    for light in scene.lights:
-                        if visible(scene.shapes, isect.hit, light.position):
-                            lambertian = (1.0 / math.pi) * isect.color
-                            wi = normalize(light.position - isect.hit)
-                            theta = math.fabs(dot(isect.normal, wi))
-                            color = multiply(lambertian, light.intensity) * theta
-                            acum = acum + color
-            acum = float(1.0 / scene.samples_per_pixel) * acum
-            index = y * scene.width + x
-            pixels[index] = acum
-    return pixels
+    camera = Camera(position,lookat,distance)
 
+    lights= data['lights']
+    lights_list = []
 
-def create_scene_1():
-    camera = Camera(eye=Vec3(0.0, 0.0, 0.0), lookat=Vec3(2.0, 0.0, 0.0), distance=800.0)
-    shapes = [
-        Sphere(position=Vec3(2.0, -0.12, 0.0), radius=0.2, color=Vec3(1.0, 0.4, 0.4)),
-        Sphere(position=Vec3(1.5, 0.1, 0.1), radius=0.1, color=Vec3(1.0, 1.0, 0.4)),
-        Sphere(position=Vec3(1.7, 0.1, -0.15), radius=0.1, color=Vec3(0.4, 0.4, 1.0)),
-    ]
-    lights = [
-        PointLight(position=Vec3(0.0, 0.0, 0.0), intensity=Vec3(1.0, 1.0, 1.0)),
-        PointLight(position=Vec3(1.0, 2.0, 0.0), intensity=Vec3(3.0, 3.0, 3.0)),
-    ]
-    width = 320
-    height = 240
-    samples_per_pixel = 1
+    for light in lights:
+        positiondata = light['position']
+        position = Vec3(positiondata[0],positiondata[1],positiondata[2])
 
-    scene = Scene(width=width, height=height, samples_per_pixel=samples_per_pixel,
-                  camera=camera, shapes=shapes, lights=lights)
-    return scene
+        intensitydata = light['intensity']
+        intensity = Vec3(intensitydata[0],intensitydata[1],intensitydata[2])
+
+        lights_list.append(PointLight(position,intensity))
+
+    shapes = data['shapes']
+    shapes_list = []
+
+    for shape in shapes:
+        positiondata = shape['position']
+        position = Vec3(positiondata[0],positiondata[1],positiondata[2])
+
+        radius = shape['radius']
+
+        colordata = shape['color']
+        color = Vec3(colordata[0],colordata[1],colordata[2])
+
+        shapes_list.append(Sphere(position,radius,color))
+
+    width = data['render_settings']['image_width']
+    height = data['render_settings']['image_height']
+    spp = data['render_settings']['samples_per_pixel']
+    threads = data['render_settings']['num_threads']
+
+    scene = Scene(width,height,spp,camera,shapes_list,lights_list)
+
+    return scene, threads
 
 
 def write_raw_png(buf, width, height):
@@ -240,15 +241,3 @@ def write_png(pixels, width, height, filename):
     data = write_raw_png(buf, width=width, height=height)
     with open(filename, 'wb') as fp:
         fp.write(data)
-
-
-
-if __name__ == "__main__":
-    scene = create_scene_1()
-    start = time.time()
-    pixels = render(scene=scene)
-    end = time.time()
-    print(f"Render time: {end-start}")
-    from datetime import datetime
-    curr_datetime = datetime.now().strftime() # yyyy-mm-dd-hh-mm-ss
-    write_png(pixels, scene.width, scene.height, f"test-{curr_datetime}.png")

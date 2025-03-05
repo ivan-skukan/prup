@@ -1,0 +1,7 @@
+play with camera angles, light positions etc.
+start making gui by streamlining scene creation. use given scene as base example
+parallelize at some point 
+"Multithreading can be good for handling I/O tasks (like GUI updates) and is simpler when you need shared state between threads.
+Multiprocessing is better for heavy computation, like ray tracing, because it can fully utilize multiple CPU cores without being limited by the GIL." utilize both?
+
+numpy
